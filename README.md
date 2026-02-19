@@ -17,6 +17,9 @@ A collection of useful scripts and tools for OpenClaw, the personal AI assistant
 ### 🧠 Memory Management
 - **`archive-memory.sh`** - Memory archiving system for OpenClaw's MEMORY.md file with automatic timestamping and search capabilities
 
+### 🔧 Development Tools
+- **`add-tool.sh`** - Helper script for adding new tools to the repository with interactive prompts and automatic documentation
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -60,6 +63,13 @@ Manages OpenClaw's memory system by:
 - Archiving old memories to prevent context bloat
 - Maintaining searchable history
 - Providing clean memory management workflows
+
+### Development Helper
+Simplifies adding new tools to the collection by:
+- Interactive prompts for tool details
+- Automatic file copying and organization
+- README template generation
+- Git integration for easy commits
 
 ## ⚙️ Configuration
 
