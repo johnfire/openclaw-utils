@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `system-updates.cron`: Automated system update configurations
   - `security-scan.cron`: Regular security check schedules
   - README with best practices and troubleshooting
+- **Development Tools**:
+  - `add-tool.sh`: Helper script for adding new tools to repository
+  - Interactive prompts and automatic documentation generation
+  - Git integration for easy commits and pushes
 - **Documentation**:
   - Comprehensive README files for each tool
   - Setup instructions and configuration guides
@@ -56,3 +60,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Develop web interface for monitoring dashboard
 - Add support for additional messaging platforms
 - Create installation script for easy setup
+- Make `session_token_monitor.py` paths configurable via environment variables
