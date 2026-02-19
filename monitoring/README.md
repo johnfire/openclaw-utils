@@ -123,6 +123,3 @@ You can also create an OpenClaw cron job:
 - **OpenClaw's built-in `/status` command**: Quick manual checks
 - **Heartbeat monitoring**: Integrate with your HEARTBEAT.md
 - **Memory archiving**: Use with archive-memory.sh to manage context
----
-
-## test-demo

@@ -91,3 +91,5 @@ MIT License - see LICENSE file for details
 - Built for [OpenClaw](https://openclaw.ai)
 - Inspired by real-world automation needs
 - Community-driven tool development
+### Monitoring
+
