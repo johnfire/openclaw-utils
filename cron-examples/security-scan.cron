@@ -1,0 +1,121 @@
+# Security Scan Automation
+# Regular security checks for OpenClaw environment
+
+## Option 1: ClawSec Advisory Check (Every 6 hours)
+# Using the check-clawsec-advisories.sh script
+0 */6 * * * cd /path/to/openclaw-utils/security && ./check-clawsec-advisories.sh >> /var/log/security-scan.log 2>&1
+
+## Option 2: OpenClaw Cron Job
+# Create with: openclaw cron add --name "ClawSec Advisory Scan" --every 21600000 --sessionTarget isolated --payload '{"kind":"agentTurn","message":"Run ClawSec advisory scan. If installed skills are flagged as malicious or removal is recommended, notify the user and request explicit approval before any removal."}'
+
+## Option 3: Combined Security Scan
+# Runs multiple security checks
+0 2 * * * /path/to/security-daily-scan.sh >> /var/log/security-daily.log 2>&1
+
+## Full Script Example (security-daily-scan.sh)
+#!/bin/bash
+# security-daily-scan.sh - Daily security checks
+
+LOG_FILE="/var/log/security-daily.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+ALERT_SENT=false
+
+echo "=== Daily Security Scan: $TIMESTAMP ===" >> "$LOG_FILE"
+
+# 1. ClawSec Advisory Check
+echo "Running ClawSec advisory check..." >> "$LOG_FILE"
+if cd /path/to/openclaw-utils/security && ./check-clawsec-advisories.sh >> "$LOG_FILE" 2>&1; then
+    echo "✓ ClawSec check completed" >> "$LOG_FILE"
+else
+    echo "✗ ClawSec check failed" >> "$LOG_FILE"
+    ALERT_SENT=true
+    /path/to/openclaw message send -m "Security scan: ClawSec check failed"
+fi
+
+# 2. File Integrity Check (Soul Guardian)
+echo "Running file integrity check..." >> "$LOG_FILE"
+if cd /path/to/openclaw/workspace && python3 skills/soul-guardian/scripts/soul_guardian.py check >> "$LOG_FILE" 2>&1; then
+    echo "✓ File integrity check completed" >> "$LOG_FILE"
+else
+    echo "✗ File integrity check found issues" >> "$LOG_FILE"
+    ALERT_SENT=true
+    /path/to/openclaw message send -m "Security scan: File integrity issues detected"
+fi
+
+# 3. System Security Check
+echo "Running system security check..." >> "$LOG_FILE"
+# Check for failed SSH attempts
+SSH_FAILURES=$(grep "Failed password" /var/log/auth.log 2>/dev/null | wc -l)
+if [ $SSH_FAILURES -gt 10 ]; then
+    echo "⚠️ High SSH failures: $SSH_FAILURES" >> "$LOG_FILE"
+    ALERT_SENT=true
+    /path/to/openclaw message send -m "Security: $SSH_FAILURES failed SSH attempts today"
+fi
+
+# Check for root login attempts
+ROOT_LOGINS=$(grep "root.*ssh" /var/log/auth.log 2>/dev/null | wc -l)
+if [ $ROOT_LOGINS -gt 0 ]; then
+    echo "⚠️ Root SSH attempts: $ROOT_LOGINS" >> "$LOG_FILE"
+fi
+
+# 4. OpenClaw Version Check
+echo "Checking OpenClaw version..." >> "$LOG_FILE"
+OPENCLAW_VERSION=$(openclaw --version 2>/dev/null | head -1)
+echo "OpenClaw: $OPENCLAW_VERSION" >> "$LOG_FILE"
+
+# 5. Skill Inventory
+echo "Listing installed skills..." >> "$LOG_FILE"
+ls -la ~/.openclaw/workspace/skills/ >> "$LOG_FILE" 2>&1
+
+# Send summary if no alerts were sent
+if [ "$ALERT_SENT" = false ]; then
+    echo "✓ All security checks passed" >> "$LOG_FILE"
+    /path/to/openclaw message send -m "Security scan: All checks passed at $(date '+%H:%M')"
+fi
+
+echo "=== Daily Security Scan Completed: $(date '+%Y-%m-%d %H:%M:%S') ===" >> "$LOG_FILE"
+
+## Option 4: Heartbeat Integration
+# Add to HEARTBEAT.md:
+# ## Security Checks
+# - Run ./check-clawsec-advisories.sh
+# - Check for critical/high severity advisories affecting installed skills
+# - Report any matches immediately as security alerts
+# - Run soul-guardian check for file integrity
+
+## Installation
+# 1. Save as /usr/local/bin/security-daily-scan.sh
+# 2. Make executable: chmod +x /usr/local/bin/security-daily-scan.sh
+# 3. Add to crontab: 0 2 * * * /usr/local/bin/security-daily-scan.sh
+
+## Frequency Recommendations
+# - ClawSec checks: Every 6 hours (critical), Daily (normal)
+# - File integrity: Daily
+# - System security: Daily
+# - Full audit: Weekly
+
+## Alert Thresholds
+# Adjust these based on your risk tolerance:
+# - SSH failures: >10 per day (alert), >50 per day (critical)
+# - Root logins: >0 (warning for most setups)
+# - Failed updates: Immediate alert
+# - Missing skills: Warning
+
+## Log Management
+# Keep logs for 30 days, compress older logs
+# /etc/logrotate.d/security-scans:
+# /var/log/security-*.log {
+#   daily
+#   rotate 30
+#   compress
+#   missingok
+#   notifempty
+#   create 644 root root
+# }
+
+## Security Notes
+# - Run scans as non-root user when possible
+# - Use secure credentials storage for any API keys
+# - Review logs regularly for patterns
+# - Update security tools regularly
+# - Consider external monitoring for critical systems

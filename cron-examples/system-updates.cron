@@ -1,0 +1,77 @@
+# System Updates Automation
+# Runs system updates twice daily and notifies via OpenClaw
+
+## Option 1: System Cron (Traditional)
+# Runs at 8:15 AM and 5:15 PM daily
+15 8,17 * * * /usr/bin/sudo /usr/bin/apt update && /usr/bin/sudo /usr/bin/apt upgrade -y >> /var/log/system-updates.log 2>&1
+
+## Option 2: OpenClaw Cron Job
+# Create with: openclaw cron add --name "System Updates" --schedule "15 8,17 * * *" --sessionTarget isolated --payload '{"kind":"agentTurn","message":"Run system updates: sudo apt update && sudo apt upgrade -y. Send WhatsApp summary of what was updated."}'
+
+## Option 3: Hybrid Approach (Recommended)
+# System cron triggers OpenClaw notification
+15 8,17 * * * /usr/bin/sudo /usr/bin/apt update && /usr/bin/sudo /usr/bin/apt upgrade -y && /path/to/openclaw message send -m "System updates completed at $(date)" >> /var/log/system-updates.log 2>&1
+
+## Option 4: With Passwordless Sudo
+# First, set up passwordless sudo for apt (see security best practices)
+# Then use:
+15 8,17 * * * /usr/bin/apt update && /usr/bin/apt upgrade -y >> /var/log/system-updates.log 2>&1
+
+## Full Script Example (system-update.sh)
+#!/bin/bash
+# system-update.sh - Automated system updates with notifications
+
+LOG_FILE="/var/log/system-updates.log"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
+echo "=== System Update Started: $TIMESTAMP ===" >> "$LOG_FILE"
+
+# Update package lists
+if /usr/bin/apt update >> "$LOG_FILE" 2>&1; then
+    echo "✓ Package lists updated" >> "$LOG_FILE"
+else
+    echo "✗ Failed to update package lists" >> "$LOG_FILE"
+    /path/to/openclaw message send -m "System update FAILED: Could not update package lists"
+    exit 1
+fi
+
+# Check for updates
+UPDATES=$(/usr/bin/apt list --upgradable 2>/dev/null | wc -l)
+echo "Updates available: $((UPDATES - 1))" >> "$LOG_FILE"
+
+if [ $UPDATES -gt 1 ]; then
+    # Perform upgrades
+    if /usr/bin/apt upgrade -y >> "$LOG_FILE" 2>&1; then
+        echo "✓ System upgraded successfully" >> "$LOG_FILE"
+        /path/to/openclaw message send -m "System updated: $((UPDATES - 1)) packages upgraded"
+    else
+        echo "✗ Upgrade failed" >> "$LOG_FILE"
+        /path/to/openclaw message send -m "System update FAILED during upgrade"
+    fi
+else
+    echo "✓ No updates available" >> "$LOG_FILE"
+    /path/to/openclaw message send -m "System check: No updates available"
+fi
+
+echo "=== System Update Completed: $(date '+%Y-%m-%d %H:%M:%S') ===" >> "$LOG_FILE"
+
+## Installation
+# 1. Save as /usr/local/bin/system-update.sh
+# 2. Make executable: chmod +x /usr/local/bin/system-update.sh
+# 3. Add to crontab: 15 8,17 * * * /usr/local/bin/system-update.sh
+
+## Security Notes
+# - Consider using unattended-upgrades for security updates only
+# - Review update logs regularly
+# - Test updates in a staging environment if possible
+# - Keep backups before major updates
+
+## Log Rotation
+# Add to /etc/logrotate.d/system-updates:
+# /var/log/system-updates.log {
+#   weekly
+#   rotate 4
+#   compress
+#   missingok
+#   notifempty
+# }
